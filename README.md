@@ -9,8 +9,6 @@ A simple power flow calculator using Newton's method.
 
 * The [Options](https://mulholland.xyz/docs/options/) library
 
-* [RapidJSON]() for JSON output
-
 * Compiler with supports C++17
 
 ## 2. Usage
