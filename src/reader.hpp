@@ -1,10 +1,17 @@
+//
+// arma-flow/reader.hpp
+//
+// @author CismonX
+//
+
 #pragma once
 
 #include <armadillo>
 
 namespace flow
 {
-    class input
+    /// Provides read utilities.
+    class reader
     {
         /// The loaded matrix.
         arma::dmat mat_;

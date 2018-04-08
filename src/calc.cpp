@@ -1,84 +1,323 @@
+//
+// arma-flow/calc.cpp
+//
+// @author CismonX
+//
+
 #include "calc.hpp"
-#include "executor.hpp"
+#include "writer.hpp"
 
 namespace flow
 {
-    std::complex<double> calc::edge_data::impedance() const
+    unsigned calc::node_offset(unsigned id) const
     {
-        const auto deno = r * r + x * x;
-        return { r / deno, -x / deno };
+        for (auto offset = 0U; offset < num_nodes_; ++offset)
+            if (nodes_[offset].id == id)
+                return offset;
+        return 0;
     }
 
-    std::complex<double> calc::edge_data::grounding_admittance() const
+    double calc::j_elem_g_b(unsigned row, unsigned col) const
     {
-        return { 0, b };
+        return n_adm_g_.at(row, col) * e_[row] + n_adm_b_.at(row, col) * f_[row];
+    }
+
+    double calc::j_elem_b_g(unsigned row, unsigned col) const
+    {
+        return n_adm_b_.at(row, col) * e_[row] - n_adm_g_.at(row, col) * f_[row];
+    }
+
+    double calc::j_elem_a(unsigned row) const
+    {
+        auto sum = 0.0;
+        for (auto col = 0U; col < num_nodes_; ++col)
+            if (row == col || adj_.at(row, col))
+                sum += n_adm_b_.at(row, col) * f_[col] - n_adm_g_.at(row, col) * e_[col];
+        return sum;
+    }
+
+    double calc::j_elem_c(unsigned row) const
+    {
+        auto sum = 0.0;
+        for (auto col = 0U; col < num_nodes_; ++col)
+            if (row == col || adj_.at(row, col))
+                sum += n_adm_g_.at(row, col) * f_[col] + n_adm_b_.at(row, col) * e_[col];
+        return sum;
+    }
+
+    void calc::jacobian()
+    {
+        mat_elem_foreach(j_h_, [this](auto& elem, auto row, auto col)
+        {
+            if (row == col)
+                elem = j_elem_c(row) - j_elem_d(row);
+            else
+                elem = -j_elem_b_g(row, col);
+        });
+        mat_elem_foreach(j_n_, [this](auto& elem, auto row, auto col)
+        {
+            if (row == col)
+                elem = -j_elem_a(row) + j_elem_b(row);
+            else
+                elem = j_elem_g_b(row, col);
+        });
+        mat_elem_foreach(j_m_, [this](auto& elem, auto row, auto col)
+        {
+            if (row == col)
+                elem = -j_elem_a(row) - j_elem_b(row);
+            else
+                elem = -j_elem_g_b(row, col);
+        });
+        mat_elem_foreach(j_l_, [this](auto& elem, auto row, auto col)
+        {
+            if (row == col)
+                elem = -j_elem_c(row) - j_elem_d(row);
+            else
+                elem = -j_elem_b_g(row, col);
+        });
+        // We shouldn't start at 0. We should start at m.
+        mat_elem_foreach(j_r_, [this](auto& elem, auto row, auto col)
+        {
+            if (row + num_pq_ == col)
+                elem = f_[row + num_pq_] * 2;
+            else
+                elem = 0;
+        });
+        mat_elem_foreach(j_s_, [this](auto& elem, auto row, auto col)
+        {
+            if (row + num_pq_ == col)
+                elem = e_[row + num_pq_] * 2;
+            else
+                elem = 0;
+        });
     }
 
     void calc::init(const arma::dmat& nodes, const arma::dmat& edges,
-        int max_iterations, double accuracy)
+        bool verbose, double epsilon)
     {
-        if (max_iterations <= 0)
-            executor::print_and_exit("Bad number of iterations. Positive integer expected.");
-        if (accuracy < 0 || accuracy > 1)
-            executor::print_and_exit("Invalid accuracy.");
         if (nodes.n_cols != 5 || edges.n_cols != 6)
-            executor::print_and_exit("Bad input matrix format.");
+            writer::error("Bad input matrix format.");
         nodes.each_row([this](const arma::rowvec& row)
         {
-            using node_type = node_data::node_type;
-            auto type = node_type::swing;
-            switch (static_cast<unsigned>(row[4]))
-            {
-            case 0:
-                break;
-            case 1:
-                type = node_type::pq;
-                break;
-            case 2:
-                type = node_type::pv;
-                break;
-            default:
-                executor::print_and_exit("Bad node type.");
-            }
+            auto type_val = static_cast<unsigned>(row[4]);
+            auto type = node_data::swing;
+            if (type_val == 1) {
+                type = node_data::pq;
+                ++num_pq_;
+            } else if (type_val == 2) {
+                type = node_data::pv;
+                ++num_pv_;
+            } else if (type_val != 0)
+                writer::error("Bad node type.");
             nodes_.push_back({
-                node_num_++, row[0], row[1], row[2], row[3], type
+                num_nodes_++, row[0], row[1], row[2], row[3], type
             });
         });
+        // Nodes should be sorted, PQ nodes should be followed by PV nodes,
+        // while swing node be the last.
+        std::sort(nodes_.begin(), nodes_.end(), [](auto&& n1, auto&& n2)
+        {
+            return n1.type < n2.type;
+        });
+        adj_.zeros(num_nodes_, num_nodes_);
+        if (num_nodes_ != num_pq_ + num_pv_ + 1)
+            writer::error("Only one swing node should exist.");
         edges.each_row([this](const arma::rowvec& row)
         {
             auto n1 = static_cast<unsigned>(row[0]) - 1;
             auto n2 = static_cast<unsigned>(row[1]) - 1;
-            if (n1 >= node_num_ || n2 >= node_num_)
-                executor::print_and_exit("Bad node offset.");
+            if (n1 >= num_nodes_ || n2 >= num_nodes_)
+                writer::error("Bad node offset.");
             edges_.push_back({
-                &nodes_[n1], &nodes_[n2], row[2], row[3], row[4], row[5]
+                n1, n2, row[2], row[3], row[4], row[5]
             });
         });
+        verbose_ = verbose;
+        epsilon_ = epsilon;
     }
 
     void calc::node_admittance()
     {
-        arma::cx_mat node_adm_cplx(node_num_, node_num_, arma::fill::zeros);
+        arma::cx_mat node_adm_cplx(num_nodes_, num_nodes_, arma::fill::zeros);
         for (auto&& edge : edges_) {
-            const auto n1 = edge.n1->offset;
-            const auto n2 = edge.n2->offset;
             const auto impedance = edge.impedance();
+            const auto m = node_offset(edge.m);
+            const auto n = node_offset(edge.n);
             // Whether this edge has transformer.
             if (edge.k) {
-                node_adm_cplx.at(n1, n1) += impedance;
-                node_adm_cplx.at(n2, n2) += impedance / (edge.k * edge.k);
-                node_adm_cplx.at(n1, n2) -= impedance / edge.k;
-                node_adm_cplx.at(n2, n1) -= impedance / edge.k;
-            }
-            else {
+                node_adm_cplx.at(m, m) += impedance;
+                node_adm_cplx.at(n, n) += impedance / std::pow(edge.k, 2);
+                node_adm_cplx.at(m, n) -= impedance / edge.k;
+                node_adm_cplx.at(n, m) -= impedance / edge.k;
+            } else {
                 const auto delta_diag = impedance + edge.grounding_admittance();
-                node_adm_cplx.at(n1, n1) += delta_diag;
-                node_adm_cplx.at(n2, n2) += delta_diag;
-                node_adm_cplx.at(n1, n2) -= impedance;
-                node_adm_cplx.at(n2, n1) -= impedance;
+                node_adm_cplx.at(m, m) += delta_diag;
+                node_adm_cplx.at(n, n) += delta_diag;
+                node_adm_cplx.at(m, n) -= impedance;
+                node_adm_cplx.at(n, m) -= impedance;
             }
+            adj_.at(m, n) = 1;
+            adj_.at(n, m) = 1;
         }
-        node_adm_real_ = arma::real(node_adm_cplx);
-        node_adm_imag_ = arma::imag(node_adm_cplx);
+        n_adm_g_ = arma::real(node_adm_cplx);
+        n_adm_b_ = arma::imag(node_adm_cplx);
+        if (verbose_) {
+            writer::println("Real part of node admittance matrix:");
+            writer::print_mat(n_adm_g_);
+            writer::println("Imaginary part of node admittance matrix:");
+            writer::print_mat(n_adm_b_);
+        }
+    }
+
+    void calc::iterate_init()
+    {
+        init_p_.zeros(num_nodes_ - 1);
+        init_q_.zeros(num_pq_);
+        init_v_.zeros(num_pv_);
+        auto i_p = 0;
+        auto i_q = 0;
+        auto i_v = 0;
+        e_.resize(num_nodes_);
+        for (auto&& node : nodes_) {
+            if (node.type == node_data::pq) {
+                init_p_[i_p] = -node.p;
+                init_q_[i_q++] = -node.q;
+            } else if (node.type == node_data::pv) {
+                init_p_[i_p] = node.g - node.p;
+                init_v_[i_v++] = node.v;
+            }
+            e_[i_p++] = node.v;
+        }
+        f_.zeros(num_nodes_);
+        j_h_.zeros(num_nodes_ - 1, num_nodes_ - 1);
+        j_n_.zeros(num_nodes_ - 1, num_nodes_ - 1);
+        j_m_.zeros(num_pq_, num_nodes_ - 1);
+        j_l_.zeros(num_pq_, num_nodes_ - 1);
+        j_r_.zeros(num_pv_, num_nodes_ - 1);
+        j_s_.zeros(num_pv_, num_nodes_ - 1);
+        delta_p_.zeros(num_nodes_ - 1);
+        delta_q_.zeros(num_pq_);
+        delta_v_.zeros(num_pv_);
+        p_.zeros(num_nodes_);
+        q_.zeros(num_nodes_);
+        update_f_x();
+    }
+
+    void calc::prepare_solve()
+    {
+        // Cross-construct F(x) vector.
+        f_x_.zeros(2 * num_nodes_ - 2);
+        for (auto row = 0U; row < num_nodes_ - 1; ++row) {
+            f_x_[2 * row] = delta_p_[row];
+            f_x_[2 * row + 1] = row < num_pq_ ? delta_q_[row] : delta_v_[row - num_pq_];
+        }
+        // Cross-construct jacobian matrix.
+        arma::dmat jacobian(2 * num_nodes_ - 2, 2 * num_nodes_ - 2);
+        for (auto row = 0U; row < num_nodes_ - 1; ++row)
+            for (auto col = 0U; col < num_nodes_ - 1; ++col) {
+                jacobian.at(2 * row, 2 * col) = j_h_.at(row, col);
+                jacobian.at(2 * row, 2 * col + 1) = j_n_.at(row, col);
+                if (row < num_pq_) {
+                    jacobian.at(2 * row + 1, 2 * col) = j_m_.at(row, col);
+                    jacobian.at(2 * row + 1, 2 * col + 1) = j_l_.at(row, col);
+                } else {
+                    jacobian.at(2 * row + 1, 2 * col) = j_r_.at(row - num_pq_, col);
+                    jacobian.at(2 * row + 1, 2 * col + 1) = j_s_.at(row - num_pq_, col);
+                }
+            }
+        if (verbose_) {
+            writer::println("Jacobian matrix");
+            writer::print_mat(jacobian);
+        }
+        // Transform into a sparse matrix for spsolve().
+        j_ = jacobian;
+    }
+
+    void calc::update_f_x()
+    {
+        vec_elem_foreach(delta_p_, [this](auto& elem, auto row)
+        {
+            p_[row] = calc_p(row);
+            elem = init_p_[row] - p_[row];
+        });
+        vec_elem_foreach(delta_q_, [this](auto& elem, auto row)
+        {
+            q_[row] = calc_q(row);
+            elem = init_q_[row] - q_[row];
+        });
+        vec_elem_foreach(delta_v_, [this](auto& elem, auto row)
+        {
+            auto i = row + num_pq_;
+            elem = std::pow(init_v_[row], 2) - std::pow(e_[i], 2) - std::pow(f_[i], 2);
+        });
+        if (verbose_) {
+            writer::println("Delta P:");
+            writer::print_mat(delta_p_.t());
+            writer::println("Delta Q:");
+            writer::print_mat(delta_q_.t());
+            writer::println("Delta U^2:");
+            writer::print_mat(delta_v_.t());
+        }
+    }
+
+    unsigned calc::solve()
+    {
+        jacobian();
+        prepare_solve();
+        const auto x_vec = spsolve(j_, f_x_, "superlu").col(0);
+        vec_elem_foreach(f_, [&x_vec](auto& elem, auto row)
+        {
+            elem += x_vec[2 * row];
+        });
+        vec_elem_foreach(e_, [&x_vec](auto& elem, auto row)
+        {
+            elem += x_vec[2 * row + 1];
+        });
+        if (verbose_) {
+            writer::println("Correction vector of voltage (real):");
+            writer::print_mat(e_.t());
+            writer::println("Correction vector of voltage (imaginary):");
+            writer::print_mat(f_.t());
+        }
+        update_f_x();
+        writer::println("Number of iterations: ", ++n_iter_);
+        return n_iter_;
+    }
+
+    double calc::get_max() const
+    {
+        arma::dmat mat = join_cols(join_cols(delta_p_, delta_q_), delta_v_);
+        auto max = 0.0;
+        for (auto&& elem : mat)
+            if (std::abs(elem) > max)
+                max = std::abs(elem);
+        return max;
+    }
+
+    arma::dmat calc::result()
+    {
+        p_[num_nodes_ - 1] = calc_p(num_nodes_ - 1);
+        vec_elem_foreach(delta_v_, [this](auto& elem, auto row)
+        {
+            auto i = row + num_pq_;
+            q_[i] = calc_q(i);
+        });
+        q_[num_nodes_ - 1] = calc_q(num_nodes_ - 1);
+        arma::colvec v(num_nodes_);
+        vec_elem_foreach(v, [this](auto& elem, auto col)
+        {
+            elem = std::sqrt(std::pow(e_[col], 2) + std::pow(f_[col], 2));
+        });
+        arma::colvec theta(num_nodes_);
+        vec_elem_foreach(theta, [this](auto& elem, auto col)
+        {
+            elem = std::atan(f_[col] / e_[col]);
+        });
+        arma::colvec node_id(num_nodes_);
+        vec_elem_foreach(node_id, [this](auto& elem, auto col)
+        {
+            elem = nodes_[col].id;
+        });
+        return join_rows(node_id, join_rows(join_rows(p_, q_), join_rows(v, theta)));
     }
 }

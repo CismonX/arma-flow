@@ -1,3 +1,9 @@
+//
+// arma-flow/args.cpp
+//
+// @author CismonX
+//
+
 #include "args.hpp"
 
 namespace flow
@@ -39,14 +45,21 @@ namespace flow
         return arg_parser_.getFlag("r");
     }
 
-    int args::max_iterations()
+    bool args::max_iterations(unsigned& max)
     {
-        return arg_parser_.getInt("i");
+        const auto arg_i = arg_parser_.getInt("i");
+        if (!arg_parser_.found("i") || arg_i <= 0) {
+            max = 100;
+            return false;
+        }
+        max = arg_i;
+        return true;
     }
 
-    double args::accuracy()
+    bool args::accuracy(double& epsilon)
     {
-        return arg_parser_.getDouble("a");
+        epsilon = arg_parser_.getDouble("a");
+        return arg_parser_.found("a");
     }
 
     bool args::verbose()

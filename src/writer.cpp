@@ -1,7 +1,8 @@
-#include <iomanip>
-
-#include "output.hpp"
-#include "executor.hpp"
+//
+// arma-flow/writer.cpp
+//
+// @author CismonX
+//
 
 #ifdef _WIN32
 #include <Windows.h>
@@ -9,11 +10,14 @@
 #include <sys/ioctl.h>
 #include <unistd.h>
 #endif // _WIN32
+#include <iomanip>
 
+#include "writer.hpp"
+#include "executor.hpp"
 
 namespace flow
 {
-    int output::max_elems_per_line()
+    int writer::max_elems_per_line()
     {
 #ifdef _WIN32
         CONSOLE_SCREEN_BUFFER_INFO csbi;
@@ -28,11 +32,11 @@ namespace flow
         return std::floor((width - 7) / 11);
     }
 
-    void output::print_dmat(const arma::dmat& mat)
+    void writer::print_mat(const arma::dmat& mat)
     {
         mat.each_row([](const arma::rowvec& row)
         {
-            std::cout << std::setprecision(7) << std::left;
+            std::cout << std::setprecision(6) << std::left;
             auto counter = 0;
             auto elems = max_elems_per_line();
             for (auto&& elem : row)
@@ -41,7 +45,7 @@ namespace flow
                     std::cout << "...(" << row.n_elem - elems << ')';
                     break;
                 }
-                std::cout << std::setw(10) << elem;
+                std::cout << std::setw(10) << elem << ' ';
             }
             std::cout << std::endl;
         });

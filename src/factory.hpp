@@ -1,59 +1,80 @@
+//
+// arma-flow/factory.hpp
+//
+// @author CismonX
+//
+
 #pragma once
 
-#include "input.hpp"
+#include "reader.hpp"
 #include "args.hpp"
 #include "executor.hpp"
 #include "calc.hpp"
-#include "output.hpp"
+#include "writer.hpp"
 
 namespace flow
 {
+    /// Contains factory methods for this program.
     class factory
     {
-        input input_;
+        /// The reader instance.
+        reader reader_;
 
+        /// The arg parser instance.
         args args_;
 
+        /// The executor instance.
         executor executor_;
 
+        /// The power flow calculator instance. 
         calc calc_;
 
-        output output_;
+        /// The writer instance.
+        writer writer_;
 
+        /// Singleton for this factory.
         static factory singleton_;
 
+        /**
+         * Private default constructor.
+         */
         explicit factory() = default;
-        
-    public:
 
+    public:
+        /// Get factory.
         static factory* get()
         {
             return &singleton_;
         }
 
-        input* get_input()
+        /// Get reader.
+        reader* get_reader()
         {
-            return &input_;
+            return &reader_;
         }
 
+        /// Get arg parser.
         args* get_args()
         {
             return &args_;
         }
 
+        /// Get executor.
         executor* get_executor()
         {
             return &executor_;
         }
 
+        /// Get power flow calculator.
         calc* get_calc()
         {
             return &calc_;
         }
 
-        output* get_output()
+        /// Get writer.
+        writer* get_writer()
         {
-            return &output_;
+            return &writer_;
         }
     };
 

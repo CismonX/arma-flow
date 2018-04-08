@@ -1,15 +1,22 @@
-#pragma once
+//
+// arma-flow/executor.hpp
+//
+// @author CismonX
+//
 
+#pragma once
 
 namespace flow
 {
+    /// Controls the excution of this program.
     class executor
     {
     public:
+        /**
+         * Default constructor.
+         */
         explicit executor() = default;
-
-        static void print_and_exit(const std::string& message);
-
+        /// Do execute.
         void execute(int argc, char** argv) const;
     };
 }
