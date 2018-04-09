@@ -1,14 +1,12 @@
 # arma-flow
 
-A simple power flow calculator using Newton's method.
+A simple power flow calculator using Newton's method, written in C++ and armadillo.
 
 ## 1. Requirements
 
 * A newer version of [Armadillo](http://arma.sourceforge.net/)
   * Tested on 8.400.0
-
 * The [Options](https://mulholland.xyz/docs/options/) library
-
 * Compiler with supports C++17
 
 ## 2. Documentation
