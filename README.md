@@ -48,8 +48,8 @@ Input node data file and edge data file should be of CSV format. Definition of e
 
 #### 2.2.2 Edge data file
 
-* First node id (equal to node data row offset, start at 0)
-* Second node id (equal to node data row offset, start at 0)
+* First node id (equal to node data row offset, start at 1)
+* Second node id (equal to node data row offset, start at 1)
 * Resistance (real) -- R
 * Resistance (imaginary) -- X
 * Gounding admittance (divided by two) -- B/2
