@@ -4,8 +4,6 @@
 // @author CismonX
 //
 
-#include <iostream>
-
 #include "executor.hpp"
 #include "factory.hpp"
 #include "writer.hpp"
@@ -19,6 +17,7 @@ namespace flow
         auto args = factory->get_args();
         auto input = factory->get_reader();
         auto calc = factory->get_calc();
+        auto writer = factory->get_writer();
 
         // Parse options.
         args->parse(argc, argv);
@@ -48,10 +47,13 @@ namespace flow
         std::string output_path;
         if (!args->output_file_path(output_path) && verbose)
             writer::notice("Output file path not specified. Defaulted to result-*.csv.");
+        writer->set_output_path_prefix(output_path);
 
         // Initialize calculation.
         calc->init(nodes, edges, verbose, epsilon);
-        calc->node_admittance();
+        const auto admittance = calc->node_admittance();
+        writer->to_csv_file("node-admittance-real.csv", admittance.first);
+        writer->to_csv_file("node-admittance-imag.csv", admittance.second);
         calc->iterate_init();
 
         // Do iteration.
@@ -62,12 +64,13 @@ namespace flow
                 writer::println("Finished. Total number of iterations: ", num_iterations);
                 const auto result = calc->result();
                 if (verbose) {
-                    writer::println("Result(n, P, Q, V, theta):");
+                    writer::println("Result [V, theta(in rads), P, Q]:");
                     writer::print_mat(result);
                 }
-                break;
+                writer->to_csv_file("flow.csv", result, "V,theta,P,Q");
+                return;
             }
         } while (num_iterations < max);
-        writer::println("Exceeds max number of iterations. Aborted.");
+        writer::error("Exceeds max number of iterations. Aborted.");
     }
 }

@@ -13,12 +13,23 @@ namespace flow
     /// Provides write utilities.
     class writer
     {
+        /// Prefix of output file path.
+        std::string output_path_prefix_;
+
         /**
          * Determines width of stdout.
          * 
          * @return Character width.
          */
         static int max_elems_per_line();
+
+        /**
+         * Convert double to pretty string.
+         * 
+         * @param val Value to be converted.
+         * @return Converted string.
+         */
+        static std::string double_to_string(double val);
 
     public:
         /**
@@ -56,10 +67,29 @@ namespace flow
         }
 
         /**
+         * Set output path prefix.
+         * 
+         * @param prefix Output path prefix.
+         */
+        void set_output_path_prefix(const std::string& prefix)
+        {
+            output_path_prefix_ = prefix;
+        }
+
+        /**
          * Print a matrix to stdout.
          * 
          * @param mat Matrix to be printed.
          */
         static void print_mat(const arma::dmat& mat);
+
+        /**
+         * Write a matrix to a file in CSV format.
+         *
+         * @param path Path to CSV file.
+         * @param mat Matrix to be printed.
+         * @param header Header of CSV file
+         */
+        bool to_csv_file(const std::string& path, const arma::dmat& mat, const std::string& header = "");
     };
 }

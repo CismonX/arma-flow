@@ -136,37 +136,41 @@ namespace flow
         epsilon_ = epsilon;
     }
 
-    void calc::node_admittance()
+    std::pair<arma::dmat, arma::dmat> calc::node_admittance()
     {
         arma::cx_mat node_adm_cplx(num_nodes_, num_nodes_, arma::fill::zeros);
+        arma::cx_mat adm_orig(num_nodes_, num_nodes_, arma::fill::zeros);
         for (auto&& edge : edges_) {
             const auto impedance = edge.impedance();
             const auto m = node_offset(edge.m);
             const auto n = node_offset(edge.n);
             // Whether this edge has transformer.
             if (edge.k) {
-                node_adm_cplx.at(m, m) += impedance;
-                node_adm_cplx.at(n, n) += impedance / std::pow(edge.k, 2);
-                node_adm_cplx.at(m, n) -= impedance / edge.k;
-                node_adm_cplx.at(n, m) -= impedance / edge.k;
+                node_adm_cplx.at(m, m) += adm_orig(edge.m, edge.m) = impedance;
+                node_adm_cplx.at(n, n) += adm_orig(edge.n, edge.n) = impedance / std::pow(edge.k, 2);
+                node_adm_cplx.at(m, n) -= adm_orig(edge.m, edge.n) = impedance / edge.k;
+                node_adm_cplx.at(n, m) -= adm_orig(edge.n, edge.m) = impedance / edge.k;
             } else {
                 const auto delta_diag = impedance + edge.grounding_admittance();
-                node_adm_cplx.at(m, m) += delta_diag;
-                node_adm_cplx.at(n, n) += delta_diag;
-                node_adm_cplx.at(m, n) -= impedance;
-                node_adm_cplx.at(n, m) -= impedance;
+                node_adm_cplx.at(m, m) += adm_orig(edge.m, edge.m) = delta_diag;
+                node_adm_cplx.at(n, n) += adm_orig(edge.n, edge.n) = delta_diag;
+                node_adm_cplx.at(m, n) -= adm_orig(edge.m, edge.n) = impedance;
+                node_adm_cplx.at(n, m) -= adm_orig(edge.n, edge.m) = impedance;
             }
             adj_.at(m, n) = 1;
             adj_.at(n, m) = 1;
         }
         n_adm_g_ = arma::real(node_adm_cplx);
         n_adm_b_ = arma::imag(node_adm_cplx);
+        const auto n_adm_orig_g = arma::real(adm_orig);
+        const auto n_adm_orig_b = arma::imag(adm_orig);
         if (verbose_) {
             writer::println("Real part of node admittance matrix:");
-            writer::print_mat(n_adm_g_);
+            writer::print_mat(n_adm_orig_g);
             writer::println("Imaginary part of node admittance matrix:");
-            writer::print_mat(n_adm_b_);
+            writer::print_mat(n_adm_orig_b);
         }
+        return { n_adm_orig_g, n_adm_orig_b };
     }
 
     void calc::iterate_init()
@@ -262,6 +266,8 @@ namespace flow
 
     unsigned calc::solve()
     {
+        if (verbose_)
+            writer::println("Number of iterations: ", n_iter_, " (begin)");
         jacobian();
         prepare_solve();
         const auto x_vec = spsolve(j_, f_x_, "superlu").col(0);
@@ -280,8 +286,9 @@ namespace flow
             writer::print_mat(f_.t());
         }
         update_f_x();
-        writer::println("Number of iterations: ", ++n_iter_);
-        return n_iter_;
+        if (verbose_)
+            writer::println("Number of iterations: ", n_iter_, " (end)");
+        return n_iter_++;
     }
 
     double calc::get_max() const
@@ -297,27 +304,43 @@ namespace flow
     arma::dmat calc::result()
     {
         p_[num_nodes_ - 1] = calc_p(num_nodes_ - 1);
+        for (auto&& elem : p_)
+            if (approx_zero(elem))
+                elem = 0;
         vec_elem_foreach(delta_v_, [this](auto& elem, auto row)
         {
             auto i = row + num_pq_;
             q_[i] = calc_q(i);
         });
         q_[num_nodes_ - 1] = calc_q(num_nodes_ - 1);
+        for (auto&& elem : q_)
+            if (approx_zero(elem))
+                elem = 0;
         arma::colvec v(num_nodes_);
         vec_elem_foreach(v, [this](auto& elem, auto col)
         {
             elem = std::sqrt(std::pow(e_[col], 2) + std::pow(f_[col], 2));
+            if (approx_zero(elem))
+                elem = 0;
         });
         arma::colvec theta(num_nodes_);
-        vec_elem_foreach(theta, [this](auto& elem, auto col)
+        vec_elem_foreach(theta, [this](auto& elem, auto row)
         {
-            elem = std::atan(f_[col] / e_[col]);
+            elem = std::atan(f_[row] / e_[row]);
+            if (approx_zero(elem))
+                elem = 0;
         });
         arma::colvec node_id(num_nodes_);
-        vec_elem_foreach(node_id, [this](auto& elem, auto col)
+        vec_elem_foreach(node_id, [this](auto& elem, auto row)
         {
-            elem = nodes_[col].id;
+            elem = nodes_[row].id;
         });
-        return join_rows(node_id, join_rows(join_rows(p_, q_), join_rows(v, theta)));
+        arma::dmat retval = join_rows(node_id, join_rows(join_rows(v, theta), join_rows(p_, q_)));
+        arma::dmat sorted_retval(num_nodes_, 4);
+        retval.each_row([&sorted_retval](const arma::rowvec& row)
+        {
+            sorted_retval.row(row[0]) = row.subvec(1, row.n_elem - 1);
+        });
+        return sorted_retval;
     }
 }

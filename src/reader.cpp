@@ -25,11 +25,11 @@ namespace flow
                 ? path : fs::current_path().string() + '/' + path);
             if (remove_first_line)
                 ifstream.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+            return do_read(ifstream);
         }
         catch (const std::exception&) {
             return false;
         }
-        return do_read(ifstream);
     }
 
     const arma::dmat& reader::get_mat() const

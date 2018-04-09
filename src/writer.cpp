@@ -11,9 +11,9 @@
 #include <unistd.h>
 #endif // _WIN32
 #include <iomanip>
+#include <experimental/filesystem>
 
 #include "writer.hpp"
-#include "executor.hpp"
 
 namespace flow
 {
@@ -32,22 +32,62 @@ namespace flow
         return std::floor((width - 7) / 11);
     }
 
+    std::string writer::double_to_string(double val)
+    {
+        auto str = std::to_string(val ? val : std::abs(val));
+        auto pos = str.find_last_not_of('0');
+        if (pos == 0 || str[pos] == '.')
+            --pos;
+        return str.substr(0, pos + 1);
+    }
+
     void writer::print_mat(const arma::dmat& mat)
     {
         mat.each_row([](const arma::rowvec& row)
         {
-            std::cout << std::setprecision(6) << std::left;
+            std::cout << std::left;
             auto counter = 0;
             auto elems = max_elems_per_line();
-            for (auto&& elem : row)
-            {
+            for (auto&& elem : row) {
                 if (++counter > elems) {
                     std::cout << "...(" << row.n_elem - elems << ')';
                     break;
                 }
-                std::cout << std::setw(10) << elem << ' ';
+                std::cout << std::setw(10) << double_to_string(elem) << ' ';
             }
             std::cout << std::endl;
         });
+    }
+
+    bool writer::to_csv_file(const std::string& path, const arma::dmat& mat, const std::string& header)
+    {
+        std::ofstream ofstream;
+        ofstream.exceptions(std::ifstream::failbit);
+        namespace fs = std::experimental::filesystem;
+        try {
+            const auto real_path = output_path_prefix_ + path;
+            ofstream.open(
+#ifdef _WIN32
+                real_path[1] == ':'
+#else
+                real_path[0] == '/'
+#endif // _WIN32
+                ? real_path : fs::current_path().string() + '/' + real_path);
+            if (header.length())
+                ofstream << header << std::endl;
+            mat.each_row([&ofstream](const arma::rowvec& row)
+            {
+                for (auto col = 0U; col < row.n_elem; ++col) {
+                    ofstream << double_to_string(row[col]);
+                    if (col != row.n_elem - 1)
+                        ofstream << ',';
+                }
+                ofstream << std::endl;
+            });
+            return true;
+        }
+        catch (const std::exception&) {
+            return false;
+        }
     }
 }

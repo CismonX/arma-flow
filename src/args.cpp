@@ -10,13 +10,13 @@ namespace flow
 {
     args::args() : arg_parser_(
         "A simple power flow calculator using Newton's method.\n"
-        "usage: arma-flow [--version] [-h | --help] [-o <output_file>]\n"
+        "usage: arma-flow [--version] [-h | --help] [-o <output_file_prefix>]\n"
         "                 -n <node_data_file> -e <edge_data_file> [-r]\n"
         "                 [-i <max_iterations>] [-a <accuracy>]\n"
         "                 [-v | --verbose]",
         "arma-flow version 0.0.1")
     {
-        arg_parser_.newString("o", "result");
+        arg_parser_.newString("o", "result-");
         arg_parser_.newString("n");
         arg_parser_.newString("e");
         arg_parser_.newFlag("r");

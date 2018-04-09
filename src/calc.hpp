@@ -121,10 +121,10 @@ namespace flow
         bool verbose_ = false;
 
         /// Max deviation to be tolerated.
-        double epsilon_;
+        double epsilon_ = 0;
 
         /// Number of iterations.
-        unsigned n_iter_ = 0;
+        unsigned n_iter_ = 1;
         
         /**
          * Get offset of sorted node by ID.
@@ -212,6 +212,12 @@ namespace flow
             return -f_[row] * j_elem_a(row) - e_[row] * j_elem_c(row);
         }
 
+        /// Check whether a value is approximately zero.
+        bool approx_zero(double val) const
+        {
+            return std::abs(val) <= epsilon_;
+        }
+
     public:
         /**
          * Default constructor.
@@ -227,7 +233,7 @@ namespace flow
         /**
          * Calculate node admittance.
          */
-        void node_admittance();
+        std::pair<arma::dmat, arma::dmat> node_admittance();
 
         /**
          * Initialize iteratiob.
