@@ -92,7 +92,7 @@ namespace flow
         });
     }
 
-    void calc::init(const arma::dmat& nodes, const arma::dmat& edges,
+    void calc::init(const arma::mat& nodes, const arma::mat& edges,
         bool verbose, double epsilon)
     {
         if (nodes.n_cols != 5 || edges.n_cols != 6)
@@ -136,7 +136,7 @@ namespace flow
         epsilon_ = epsilon;
     }
 
-    std::pair<arma::dmat, arma::dmat> calc::node_admittance()
+    std::pair<arma::mat, arma::mat> calc::node_admittance()
     {
         arma::cx_mat node_adm_cplx(num_nodes_, num_nodes_, arma::fill::zeros);
         arma::cx_mat adm_orig(num_nodes_, num_nodes_, arma::fill::zeros);
@@ -216,7 +216,7 @@ namespace flow
             f_x_[2 * row + 1] = row < num_pq_ ? delta_q_[row] : delta_v_[row - num_pq_];
         }
         // Cross-construct jacobian matrix.
-        arma::dmat jacobian(2 * num_nodes_ - 2, 2 * num_nodes_ - 2);
+        arma::mat jacobian(2 * num_nodes_ - 2, 2 * num_nodes_ - 2);
         for (auto row = 0U; row < num_nodes_ - 1; ++row)
             for (auto col = 0U; col < num_nodes_ - 1; ++col) {
                 jacobian.at(2 * row, 2 * col) = j_h_.at(row, col);
@@ -270,14 +270,14 @@ namespace flow
             writer::println("Number of iterations: ", n_iter_, " (begin)");
         jacobian();
         prepare_solve();
-        const auto x_vec = spsolve(j_, f_x_, "superlu").col(0);
+        const auto x_vec = spsolve(j_, f_x_, "superlu");
         vec_elem_foreach(f_, [&x_vec](auto& elem, auto row)
         {
-            elem += x_vec[2 * row];
+            elem += x_vec.at(2 * row, 0);
         });
         vec_elem_foreach(e_, [&x_vec](auto& elem, auto row)
         {
-            elem += x_vec[2 * row + 1];
+            elem += x_vec.at(2 * row + 1, 0);
         });
         if (verbose_) {
             writer::println("Correction vector of voltage (real):");
@@ -293,7 +293,7 @@ namespace flow
 
     double calc::get_max() const
     {
-        arma::dmat mat = join_cols(join_cols(delta_p_, delta_q_), delta_v_);
+        arma::mat mat = join_cols(join_cols(delta_p_, delta_q_), delta_v_);
         auto max = 0.0;
         for (auto&& elem : mat)
             if (std::abs(elem) > max)
@@ -301,7 +301,7 @@ namespace flow
         return max;
     }
 
-    arma::dmat calc::result()
+    arma::mat calc::result()
     {
         p_[num_nodes_ - 1] = calc_p(num_nodes_ - 1);
         for (auto&& elem : p_)
@@ -335,8 +335,8 @@ namespace flow
         {
             elem = nodes_[row].id;
         });
-        arma::dmat retval = join_rows(node_id, join_rows(join_rows(v, theta), join_rows(p_, q_)));
-        arma::dmat sorted_retval(num_nodes_, 4);
+        arma::mat retval = join_rows(node_id, join_rows(join_rows(v, theta), join_rows(p_, q_)));
+        arma::mat sorted_retval(num_nodes_, 4);
         retval.each_row([&sorted_retval](const arma::rowvec& row)
         {
             sorted_retval.row(row[0]) = row.subvec(1, row.n_elem - 1);

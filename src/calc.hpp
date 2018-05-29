@@ -94,7 +94,7 @@ namespace flow
         arma::uchar_mat adj_;
 
         /// Node admittance matrix.
-        arma::dmat n_adm_g_, n_adm_b_;
+        arma::mat n_adm_g_, n_adm_b_;
 
         /// Given values of power and voltage.
         arma::colvec init_p_, init_q_, init_v_;
@@ -106,13 +106,13 @@ namespace flow
         arma::colvec delta_p_, delta_q_, delta_v_;
 
         /// Submatrix of Jacobian matrix.
-        arma::dmat j_h_, j_n_, j_m_, j_l_, j_r_, j_s_;
+        arma::mat j_h_, j_n_, j_m_, j_l_, j_r_, j_s_;
 
         /// F(x) of jacobian matrix.
         arma::colvec f_x_;
 
         /// Jacobian matrix (sparse).
-        arma::sp_dmat j_;
+        arma::sp_mat j_;
 
         /// Power vector of nodes.
         arma::colvec p_, q_;
@@ -227,13 +227,13 @@ namespace flow
         /**
          * Initialize.
          */
-        void init(const arma::dmat& nodes, const arma::dmat& edges,
+        void init(const arma::mat& nodes, const arma::mat& edges,
             bool verbose, double epsilon);
 
         /**
          * Calculate node admittance.
          */
-        std::pair<arma::dmat, arma::dmat> node_admittance();
+        std::pair<arma::mat, arma::mat> node_admittance();
 
         /**
          * Initialize iteration.
@@ -256,6 +256,6 @@ namespace flow
          * Get result of calculation.
          * 
          */
-        arma::dmat result();
+        arma::mat result();
     };
 }

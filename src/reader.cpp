@@ -32,7 +32,7 @@ namespace flow
         }
     }
 
-    const arma::dmat& reader::get_mat() const
+    const arma::mat& reader::get_mat() const
     {
         return mat_;
     }

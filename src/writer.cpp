@@ -40,7 +40,7 @@ namespace flow
         return str.substr(0, pos + 1);
     }
 
-    void writer::print_mat(const arma::dmat& mat)
+    void writer::print_mat(const arma::mat& mat)
     {
         mat.each_row([](const arma::rowvec& row)
         {
@@ -58,7 +58,7 @@ namespace flow
         });
     }
 
-    bool writer::to_csv_file(const std::string& path, const arma::dmat& mat, const std::string& header)
+    bool writer::to_csv_file(const std::string& path, const arma::mat& mat, const std::string& header)
     {
         std::ofstream ofstream;
         ofstream.exceptions(std::ifstream::failbit);

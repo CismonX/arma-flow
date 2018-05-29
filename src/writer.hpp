@@ -81,7 +81,7 @@ namespace flow
          * 
          * @param mat Matrix to be printed.
          */
-        static void print_mat(const arma::dmat& mat);
+        static void print_mat(const arma::mat& mat);
 
         /**
          * Write a matrix to a file in CSV format.
@@ -90,6 +90,6 @@ namespace flow
          * @param mat Matrix to be printed.
          * @param header Header of CSV file
          */
-        bool to_csv_file(const std::string& path, const arma::dmat& mat, const std::string& header = "");
+        bool to_csv_file(const std::string& path, const arma::mat& mat, const std::string& header = "");
     };
 }

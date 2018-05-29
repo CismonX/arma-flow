@@ -14,7 +14,7 @@ namespace flow
     class reader
     {
         /// The loaded matrix.
-        arma::dmat mat_;
+        arma::mat mat_;
 
         /**
          * Read matrix from an istream.
@@ -41,6 +41,6 @@ namespace flow
         /**
          * Get loaded matrix.
          */
-        const arma::dmat& get_mat() const;
+        const arma::mat& get_mat() const;
     };
 }
