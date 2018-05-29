@@ -76,7 +76,7 @@ namespace flow
         bool verbose();
 
         /**
-         * Pring help message and exit.
+         * Print help message and exit.
          * 
          * @return Whether argument is provided.
          */

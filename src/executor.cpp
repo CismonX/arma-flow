@@ -12,7 +12,7 @@ namespace flow
 {
     void executor::execute(int argc, char** argv) const
     {
-        // Get componenets.
+        // Get components.
         auto factory = factory::get();
         auto args = factory->get_args();
         auto input = factory->get_reader();

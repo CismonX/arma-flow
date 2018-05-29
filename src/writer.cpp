@@ -8,7 +8,6 @@
 #include <Windows.h>
 #else
 #include <sys/ioctl.h>
-#include <unistd.h>
 #endif // _WIN32
 #include <iomanip>
 #include <experimental/filesystem>

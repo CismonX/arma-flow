@@ -50,7 +50,7 @@ namespace flow
             /// Resistance (imaginary).
             double x;
 
-            /// Gounding admittance (imaginary).
+            /// Grounding admittance (imaginary).
             double b;
 
             /// Transformer ratio.
@@ -68,7 +68,7 @@ namespace flow
             }
 
             /**
-             * Get gounding admittance.
+             * Get grounding admittance.
              * 
              * @return Grounding admittance (complex).
              */
@@ -102,7 +102,7 @@ namespace flow
         /// Correction vector of voltage.
         arma::colvec e_, f_;
 
-        /// Imbalace of active/reactive power and voltage.
+        /// Imbalance of active/reactive power and voltage.
         arma::colvec delta_p_, delta_q_, delta_v_;
 
         /// Submatrix of Jacobian matrix.
@@ -236,7 +236,7 @@ namespace flow
         std::pair<arma::dmat, arma::dmat> node_admittance();
 
         /**
-         * Initialize iteratiob.
+         * Initialize iteration.
          */
         void iterate_init();
 
@@ -253,7 +253,7 @@ namespace flow
         double get_max() const;
 
         /**
-         * Get result of calculation
+         * Get result of calculation.
          * 
          */
         arma::dmat result();

@@ -8,7 +8,7 @@
 
 namespace flow
 {
-    /// Controls the excution of this program.
+    /// Controls the execution of this program.
     class executor
     {
     public:
@@ -16,6 +16,7 @@ namespace flow
          * Default constructor.
          */
         explicit executor() = default;
+
         /// Do execute.
         void execute(int argc, char** argv) const;
     };
