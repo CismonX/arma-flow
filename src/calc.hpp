@@ -153,10 +153,6 @@ namespace flow
         /// Vector of short circuit voltage.
         arma::cx_colvec u_f_;
 
-        arma::mat i_real_;
-
-        arma::mat i_imag_;
-
         /// Whether verbose output is enabled.
         bool verbose_;
 
