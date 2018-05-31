@@ -12,8 +12,9 @@ namespace flow
         "A simple power flow calculator using Newton's method.\n"
         "usage: arma-flow [--version] [-h | --help] [-o <output_file_prefix>]\n"
         "                 -n <node_data_file> -e <edge_data_file> [-r]\n"
-        "                 [-i <max_iterations>] [-a <accuracy>]\n"
-        "                 [-v | --verbose]",
+        "                 [-i <max_iterations>] [-a <accuracy>] [-v | --verbose]\n"
+        "                 [-s <node_id>] [--ignore-load]\n"
+        "                 [--tr <transition_impedance(real)>] [--ti <transition_impedance(imag)>]",
         "arma-flow version 0.0.1")
     {
         arg_parser_.newString("o", "result-");
@@ -22,6 +23,10 @@ namespace flow
         arg_parser_.newFlag("r");
         arg_parser_.newInt("i", 100);
         arg_parser_.newDouble("a", 0.00001);
+        arg_parser_.newInt("s");
+        arg_parser_.newFlag("ignore-load");
+        arg_parser_.newDouble("tr", 0);
+        arg_parser_.newDouble("ti", 0);
         arg_parser_.newFlag("verbose v");
     }
 
@@ -60,6 +65,27 @@ namespace flow
     {
         epsilon = arg_parser_.getDouble("a");
         return arg_parser_.found("a");
+    }
+
+    bool args::short_circuit(unsigned& node)
+    {
+        if (!arg_parser_.found("s"))
+            return false;
+        node = arg_parser_.getInt("s");
+        return true;
+    }
+
+    bool args::ignore_load()
+    {
+        return arg_parser_.getFlag("ignore-load");
+    }
+
+    bool args::transition_impedance(std::complex<double>& z_f)
+    {
+        if (!arg_parser_.found("tr") && !arg_parser_.found("ti"))
+            return false;
+        z_f = { arg_parser_.getDouble("tr"), arg_parser_.getDouble("ti") };
+        return true;
     }
 
     bool args::verbose()

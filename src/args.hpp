@@ -6,6 +6,7 @@
 
 #pragma once
 
+#include <complex>
 #include <options.h>
 
 namespace flow
@@ -49,8 +50,6 @@ namespace flow
 
         /**
          * Check whether to remove the first line from input files.
-         * 
-         * @return Whether argument is provided.
          */
         bool remove_first_line();
 
@@ -67,6 +66,23 @@ namespace flow
          * @return Whether argument is provided.
          */
         bool accuracy(double& epsilon);
+
+        /**
+         * Calculate three-phase short circuit on specified node.
+         * 
+         * @return Whether argument is provided.
+         */
+        bool short_circuit(unsigned& node);
+
+        /**
+         * Check whether to ignore load current when calculating short circuit.
+         */
+        bool ignore_load();
+
+        /**
+         * Get transition impedance of three-phase short circuit.
+         */
+        bool transition_impedance(std::complex<double>& z_f);
 
         /**
          * Check whether to enable verbose output.

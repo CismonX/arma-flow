@@ -25,7 +25,8 @@ namespace flow
         const auto width = csbi.dwSize.X;
 #else
         winsize win;
-        ioctl(STDOUT_FILENO, TIOCGWINSZ, &win);
+        if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &win) == -1)
+            return 10;
         const auto width = win.ws_col;
 #endif // _WIN32
         return std::floor((width - 7) / 11);
@@ -58,7 +59,13 @@ namespace flow
         });
     }
 
-    bool writer::to_csv_file(const std::string& path, const arma::mat& mat, const std::string& header)
+    void writer::print_complex(const std::string& prefix, const std::complex<double>& complex)
+    {
+        std::cout << prefix << complex.real() << (complex.imag() < 0 ? '-' : '+') <<
+            'j' << std::abs(complex.imag()) << std::endl;
+    }
+
+    void writer::to_csv_file(const std::string& path, const arma::mat& mat, const std::string& header) const
     {
         std::ofstream ofstream;
         ofstream.exceptions(std::ifstream::failbit);
@@ -83,10 +90,9 @@ namespace flow
                 }
                 ofstream << std::endl;
             });
-            return true;
         }
         catch (const std::exception&) {
-            return false;
+            error("Failed to write to file.");
         }
     }
 }

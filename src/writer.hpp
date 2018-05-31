@@ -84,12 +84,17 @@ namespace flow
         static void print_mat(const arma::mat& mat);
 
         /**
+         * Print a complex number to stdout.
+         */
+        static void print_complex(const std::string& prefix, const std::complex<double>& complex);
+
+        /**
          * Write a matrix to a file in CSV format.
          *
          * @param path Path to CSV file.
          * @param mat Matrix to be printed.
          * @param header Header of CSV file
          */
-        bool to_csv_file(const std::string& path, const arma::mat& mat, const std::string& header = "");
+        void to_csv_file(const std::string& path, const arma::mat& mat, const std::string& header = "") const;
     };
 }

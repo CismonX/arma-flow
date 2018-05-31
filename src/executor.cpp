@@ -10,14 +10,15 @@
 
 namespace flow
 {
+    executor::executor() : factory_(factory::get()) {}
+
     void executor::execute(int argc, char** argv) const
     {
         // Get components.
-        auto factory = factory::get();
-        auto args = factory->get_args();
-        auto input = factory->get_reader();
-        auto calc = factory->get_calc();
-        auto writer = factory->get_writer();
+        auto args = factory_->get_args();
+        auto input = factory_->get_reader();
+        auto calc = factory_->get_calc();
+        auto writer = factory_->get_writer();
 
         // Parse options.
         args->parse(argc, argv);
@@ -48,9 +49,16 @@ namespace flow
         if (!args->output_file_path(output_path) && verbose)
             writer::notice("Output file path not specified. Defaulted to result-*.csv.");
         writer->set_output_path_prefix(output_path);
+        unsigned short_circuit_node;
+        const auto short_circuit = args->short_circuit(short_circuit_node);
+        std::complex<double> transition_impedance;
+        if (short_circuit && !args->transition_impedance(transition_impedance) && verbose)
+            writer::notice("Transition impedance not specified, Defaulted to 0.");
+        const auto ignore_load = args->ignore_load();
 
         // Initialize calculation.
-        calc->init(nodes, edges, verbose, epsilon);
+        calc->init(nodes, edges, verbose, epsilon, short_circuit, ignore_load,
+            short_circuit_node, transition_impedance);
         const auto admittance = calc->node_admittance();
         writer->to_csv_file("node-admittance-real.csv", admittance.first);
         writer->to_csv_file("node-admittance-imag.csv", admittance.second);
@@ -68,9 +76,24 @@ namespace flow
                     writer::print_mat(result);
                 }
                 writer->to_csv_file("flow.csv", result, "V,theta,P,Q");
-                return;
+                goto flow_done;
             }
         } while (num_iterations < max);
         writer::error("Exceeds max number of iterations. Aborted.");
+
+        flow_done:
+
+        // Calculate three-phase short circuit.
+        if (!short_circuit)
+            return;
+        const auto impedance = calc->node_impedance();
+        writer->to_csv_file("node-impedance-real.csv", impedance.first);
+        writer->to_csv_file("node-impedance-imag.csv", impedance.second);
+        const auto i_f = calc->short_circuit_current();
+        writer::print_complex("Three-phase short circuit current: ", i_f);
+        const auto u_f = calc->short_circuit_voltage();
+        writer->to_csv_file("short-circuit-voltage.csv", u_f, "Ui(real),Ui(imag)");
+        const auto i = calc->short_circuit_edge_current();
+        writer->to_csv_file("short-circuit-edge-current.csv", i, "Iij(real),Iij(imag)");
     }
 }

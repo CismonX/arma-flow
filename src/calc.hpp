@@ -32,6 +32,12 @@ namespace flow
             /// Load (reactive power)
             double q;
 
+            /// Generator admittance
+            double x_d;
+
+            /// Sub-transient voltage of generator
+            double e;
+
             /// Node type.
             enum node_type {
                 pq, pv, swing
@@ -94,7 +100,16 @@ namespace flow
         arma::uchar_mat adj_;
 
         /// Node admittance matrix.
+        arma::cx_mat n_adm_;
+
+        /// Node admittance matrix.
         arma::mat n_adm_g_, n_adm_b_;
+
+        /// Node impedance matrix.
+        arma::cx_mat n_imp_;
+
+        /// Node impedance matrix.
+        arma::mat n_imp_g_, n_imp_b_;
 
         /// Given values of power and voltage.
         arma::colvec init_p_, init_q_, init_v_;
@@ -117,8 +132,33 @@ namespace flow
         /// Power vector of nodes.
         arma::colvec p_, q_;
 
+        /// Voltage of nodes.
+        arma::colvec v_;
+
+        /// Whether to calculate short circuit.
+        bool short_circuit_;
+
+        /// Whether to ignore load current when calculating short circuit.
+        bool ignore_load_;
+
+        /// Node ID of three-phase short circuit.
+        unsigned short_circuit_node_;
+
+        /// Transition impedance of node.
+        std::complex<double> z_f_;
+
+        /// Value of short circuit current.
+        std::complex<double> i_f_;
+
+        /// Vector of short circuit voltage.
+        arma::cx_colvec u_f_;
+
+        arma::mat i_real_;
+
+        arma::mat i_imag_;
+
         /// Whether verbose output is enabled.
-        bool verbose_ = false;
+        bool verbose_;
 
         /// Max deviation to be tolerated.
         double epsilon_ = 0;
@@ -228,12 +268,18 @@ namespace flow
          * Initialize.
          */
         void init(const arma::mat& nodes, const arma::mat& edges,
-            bool verbose, double epsilon);
+            bool verbose, double epsilon, bool short_circuit, bool ignore_load,
+            unsigned short_circuit_node, const std::complex<double>& z_f);
 
         /**
          * Calculate node admittance.
          */
         std::pair<arma::mat, arma::mat> node_admittance();
+
+        /**
+         * Calculate node impedance. 
+         */
+        std::pair<arma::mat, arma::mat> node_impedance();
 
         /**
          * Initialize iteration.
@@ -253,9 +299,23 @@ namespace flow
         double get_max() const;
 
         /**
-         * Get result of calculation.
-         * 
+         * Get result of power flow calculation.
          */
         arma::mat result();
+
+        /**
+         * Get current of three-phase short circuit.
+         */
+        std::complex<double> short_circuit_current();
+
+        /**
+         * Get node voltage of short circuit.
+         */
+        arma::mat short_circuit_voltage();
+
+        /**
+         * Get edge current of short circuit.
+         */
+        arma::mat short_circuit_edge_current();
     };
 }
