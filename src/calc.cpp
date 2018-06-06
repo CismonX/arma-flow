@@ -96,12 +96,12 @@ namespace flow
         bool verbose, double epsilon, bool short_circuit, bool ignore_load,
         unsigned short_circuit_node, const std::complex<double>& z_f)
     {
-        if (nodes.n_cols != (short_circuit ? 7 : 5) || edges.n_cols != 6)
+        if (nodes.n_cols != (short_circuit ? 6 : 5) || edges.n_cols != 6)
             writer::error("Bad input matrix format.");
         short_circuit_ = short_circuit;
         nodes.each_row([this](const arma::rowvec& row)
         {
-            const auto type_val = static_cast<unsigned>(row[short_circuit_ ? 6 : 4]);
+            const auto type_val = static_cast<unsigned>(row[short_circuit_ ? 5 : 4]);
             auto type = node_data::swing;
             if (type_val == 1) {
                 type = node_data::pq;
@@ -113,11 +113,11 @@ namespace flow
                 writer::error("Bad node type.");
             if (short_circuit_) {
                 nodes_.push_back({
-                    num_nodes_++, row[0], row[1], row[2], row[3], row[4], row[5], type
+                    num_nodes_++, row[0], row[1], row[2], row[3], row[4], type
                 });
             } else {
                 nodes_.push_back({
-                    num_nodes_++, row[0], row[1], row[2], row[3], 0, 0, type
+                    num_nodes_++, row[0], row[1], row[2], row[3], 0, type
                 });
             }
         });
@@ -143,38 +143,40 @@ namespace flow
         verbose_ = verbose;
         epsilon_ = epsilon;
         ignore_load_ = ignore_load;
-        short_circuit_node_ = short_circuit_node - 1;
+        if (short_circuit_node < 1 || short_circuit_node > num_nodes_)
+            writer::error("Bad node ID for short circuit calculation.");
+        short_circuit_node_ = node_offset(short_circuit_node - 1);
         z_f_ = z_f;
     }
 
     std::pair<arma::mat, arma::mat> calc::node_admittance()
     {
         n_adm_.zeros(num_nodes_, num_nodes_);
-        arma::cx_mat adm_orig(num_nodes_, num_nodes_, arma::fill::zeros);
+        n_adm_orig_.zeros(num_nodes_, num_nodes_);
         for (auto&& edge : edges_) {
-            const auto impedance = edge.impedance();
+            const auto admittance = edge.admittance();
             const auto m = node_offset(edge.m);
             const auto n = node_offset(edge.n);
             // Whether this edge has transformer.
             if (edge.k) {
-                n_adm_.at(m, m) = adm_orig.at(edge.m, edge.m) += impedance;
-                n_adm_.at(n, n) = adm_orig.at(edge.n, edge.n) += impedance / std::pow(edge.k, 2);
-                n_adm_.at(m, n) = adm_orig.at(edge.m, edge.n) -= impedance / edge.k;
-                n_adm_.at(n, m) = adm_orig.at(edge.n, edge.m) -= impedance / edge.k;
+                n_adm_.at(m, m) = n_adm_orig_.at(edge.m, edge.m) += admittance;
+                n_adm_.at(n, n) = n_adm_orig_.at(edge.n, edge.n) += admittance / std::pow(edge.k, 2);
+                n_adm_.at(m, n) = n_adm_orig_.at(edge.m, edge.n) -= admittance / edge.k;
+                n_adm_.at(n, m) = n_adm_orig_.at(edge.n, edge.m) -= admittance / edge.k;
             } else {
-                const auto delta_diag = impedance + edge.grounding_admittance();
-                n_adm_.at(m, m) = adm_orig.at(edge.m, edge.m) += delta_diag;
-                n_adm_.at(n, n) = adm_orig.at(edge.n, edge.n) += delta_diag;
-                n_adm_.at(m, n) = adm_orig.at(edge.m, edge.n) -= impedance;
-                n_adm_.at(n, m) = adm_orig.at(edge.n, edge.m) -= impedance;
+                const auto delta_diag = admittance + edge.grounding_admittance();
+                n_adm_.at(m, m) = n_adm_orig_.at(edge.m, edge.m) += delta_diag;
+                n_adm_.at(n, n) = n_adm_orig_.at(edge.n, edge.n) += delta_diag;
+                n_adm_.at(m, n) = n_adm_orig_.at(edge.m, edge.n) -= admittance;
+                n_adm_.at(n, m) = n_adm_orig_.at(edge.n, edge.m) -= admittance;
             }
             adj_.at(m, n) = 1;
             adj_.at(n, m) = 1;
         }
         n_adm_g_ = arma::real(n_adm_);
         n_adm_b_ = arma::imag(n_adm_);
-        const auto n_adm_orig_g = arma::real(adm_orig);
-        const auto n_adm_orig_b = arma::imag(adm_orig);
+        const auto n_adm_orig_g = arma::real(n_adm_orig_);
+        const auto n_adm_orig_b = arma::imag(n_adm_orig_);
         if (verbose_) {
             writer::println("Real part of node admittance matrix:");
             writer::print_mat(n_adm_orig_g);
@@ -187,15 +189,17 @@ namespace flow
     std::pair<arma::mat, arma::mat> calc::node_impedance()
     {
         n_imp_.zeros(num_nodes_, num_nodes_);
-        auto adm = n_adm_, adm_orig = n_adm_;
+        auto adm = n_adm_, adm_orig = n_adm_orig_;
         auto i = 0U;
         for (auto&& node : nodes_) {
-            const auto j = node_offset(i);
             if (node.type == node_data::pq) {
-                const auto impedance = std::complex<double>(p_[i], -q_[i]) / std::pow(v_[i], 2);
-                adm.at(j, j) = adm_orig.at(i, i) += impedance;
+                if (!ignore_load_) {
+                    // Note that we should use P(LD) and Q(LD).
+                    const auto impedance = std::complex<double>(-init_p_[i], init_q_[i]) / std::pow(v_[i], 2);
+                    adm.at(i, i) = adm_orig.at(node.id, node.id) += impedance;
+                }
             } else {
-                adm.at(j, j) = adm_orig.at(i, i) -= std::complex<double>(0, 1 / node.x_d);
+                adm.at(i, i) = adm_orig.at(node.id, node.id) -= std::complex<double>(0, 1 / node.x_d);
             }
             ++i;
         }
@@ -389,13 +393,11 @@ namespace flow
     std::complex<double> calc::short_circuit_current()
     {
         const auto n = short_circuit_node_;
-        if (n > num_nodes_)
-            writer::error("Bad node ID for short circuit calculation.");
         if (ignore_load_)
             i_f_ = 1;
         else
             i_f_ = { e_[n], f_[n] };
-        i_f_ /= std::complex<double>(n_imp_b_.at(n, n), n_imp_g_.at(n, n)) + z_f_;
+        i_f_ /= std::complex<double>(n_imp_g_.at(n, n), n_imp_b_.at(n, n)) + z_f_;
         return i_f_;
     }
 
@@ -406,13 +408,17 @@ namespace flow
         const auto n = short_circuit_node_;
         vec_elem_foreach(u_f_, [n, this](auto& elem, auto row)
         {
-            std::complex<double> u_f(1);
-            if (!ignore_load_)
+            std::complex<double> u_f(1), u_i(1);
+            if (!ignore_load_) {
                 u_f = { e_[row], f_[row] };
-            elem = u_f - cx(n_imp_b_.at(row, n), n_imp_g_.at(row, n)) *
-                (cx(e_[n], f_[n]) / (cx(n_imp_b_.at(n, n), n_imp_g_.at(n, n)) + z_f_));
-            if (approx_zero(elem.real()) && approx_zero(elem.imag()))
-                elem = { };
+                u_i = { e_[n], f_[n] };
+            }
+            elem = u_f - cx(n_imp_g_.at(row, n), n_imp_b_.at(row, n)) *
+                (u_i / (cx(n_imp_g_.at(n, n), n_imp_b_.at(n, n)) + z_f_));
+            if (approx_zero(elem.real()))
+                elem.real(0);
+            if (approx_zero(elem.imag()))
+                elem.imag(0);
         });
         arma::cx_colvec u_f_orig(num_nodes_);
         vec_elem_foreach(u_f_, [&u_f_orig, this](auto&& elem, auto row)
@@ -421,10 +427,10 @@ namespace flow
         });
         if (verbose_) {
             writer::println("Short circuit node voltage:");
-            for (auto&& elem : u_f_)
+            for (auto&& elem : u_f_orig)
                 writer::print_complex("", elem);
         }
-        return join_rows(arma::real(u_f_orig), arma::imag(u_f_orig));
+        return join_rows(arma::real(u_f_), arma::imag(u_f_));
     }
 
     arma::mat calc::short_circuit_edge_current()
@@ -435,16 +441,16 @@ namespace flow
             writer::println("Short circuit edge current:");
         for (auto&& edge : edges_)
         {
-            const auto impedance = edge.impedance();
+            const auto admittance = edge.admittance();
             const auto m = node_offset(edge.m);
             const auto n = node_offset(edge.n);
-            std::complex<double> z;
+            std::complex<double> y;
             if (edge.k) {
-                z = impedance * (edge.k * edge.k - edge.k + 1) / (edge.k * edge.k);
+                y = admittance * (edge.k * edge.k - edge.k + 1) / (edge.k * edge.k);
             } else {
-                z = impedance + edge.grounding_admittance() * 2.0;
+                y = admittance + edge.grounding_admittance() * 2.0;
             }
-            edge_current[i] = (u_f_[m] - u_f_[n] / (edge.k ? edge.k : 1)) / z;
+            edge_current[i] = (u_f_[m] - u_f_[n] / (edge.k ? edge.k : 1)) * y;
             if (verbose_)
                 writer::print_complex(std::to_string(edge.m + 1) + ',' +
                     std::to_string(edge.n + 1) + ": ", edge_current[i]);

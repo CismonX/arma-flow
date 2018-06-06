@@ -49,7 +49,6 @@ Input node data file and edge data file should be of CSV format. Definition of e
 * Load power (active power, PQ and PV nodes)
 * Load power (reactive power, PQ nodes)
 * (When three-phase short circuit calculation is enabled) Generator admittance
-* (When three-phase short circuit calculation is enabled) Generator sub-transient voltage
 * Node type (0 - swing node, 1- PQ node, 2 - PV node)
 
 #### 2.2.2 Edge data file

@@ -35,9 +35,6 @@ namespace flow
             /// Generator admittance
             double x_d;
 
-            /// Sub-transient voltage of generator
-            double e;
-
             /// Node type.
             enum node_type {
                 pq, pv, swing
@@ -63,14 +60,24 @@ namespace flow
             double k;
 
             /**
-             * Get impedance of edge.
+             * Get admittance of edge.
              * 
-             * @return Impedance (complex).
+             * @return Admittance (complex).
              */
-            std::complex<double> impedance() const
+            std::complex<double> admittance() const
             {
                 const auto deno = r * r + x * x;
                 return { r / deno, -x / deno };
+            }
+
+            /**
+             * Get impedance of edge.
+             *
+             * @return Admittance (complex).
+             */
+            std::complex<double> impedance() const
+            {
+                return { r, x };
             }
 
             /**
@@ -101,6 +108,9 @@ namespace flow
 
         /// Node admittance matrix.
         arma::cx_mat n_adm_;
+
+        /// Node admittance matrix in original node order.
+        arma::cx_mat n_adm_orig_;
 
         /// Node admittance matrix.
         arma::mat n_adm_g_, n_adm_b_;
