@@ -6,11 +6,25 @@ Additional support for three-phase short-circuit calculation.
 
 ## 1. Requirements
 
-* A newer version of [Armadillo](http://arma.sourceforge.net/)
+* A newer version of [Armadillo](http://arma.sourceforge.net/).
   * Tested on 8.400.0
-* The [Options](https://mulholland.xyz/docs/options/) library
-  * This library was recently renamed to Janus. In order to build correctly, you may need to modify some code.
-* Compiler with C++17 support
+* The [Janus](https://github.com/dmulholland/janus-cpp) library.
+* Compiler with C++17 support.
+
+### 1.1 Build Janus
+
+You need to build and install Janus before building arma-flow.
+
+For example:
+
+```bash
+git clone https://github.com/dmulholland/janus-cpp.git
+cd janus-cpp/src
+g++ -std=c++11 -shared -fPIC -o libjanus.so janus.cpp
+sudo cp libjanus.so /usr/lib
+sudo cp janus.h /usr/include
+```
+
 
 ## 2. Documentation
 

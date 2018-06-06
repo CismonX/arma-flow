@@ -7,7 +7,7 @@
 #pragma once
 
 #include <complex>
-#include <options.h>
+#include <janus.h>
 
 namespace flow
 {
@@ -15,7 +15,7 @@ namespace flow
     class args
     {
         /// The argument parser.
-        options::ArgParser arg_parser_;
+        janus::ArgParser arg_parser_;
 
     public:
         /**

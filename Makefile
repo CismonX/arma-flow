@@ -2,7 +2,7 @@ SOURCES     = $(wildcard src/*.cpp)
 OBJECTS     = $(SOURCES:%.cpp=%.o)
 APPLICATION = arma-flow
 CXXFLAGS    = -Wall -c -O2 -std=c++17 -o
-LDFLAGS     = -larmadillo -loptions -lstdc++fs
+LDFLAGS     = -larmadillo -ljanus -lstdc++fs
 
 all:            ${OBJECTS} ${APPLICATION}
 
