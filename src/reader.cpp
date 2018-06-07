@@ -1,5 +1,5 @@
 //
-// arma-flow/reader.hpp
+// arma-flow/reader.cpp
 //
 // @author CismonX
 //
