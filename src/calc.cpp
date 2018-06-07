@@ -430,7 +430,7 @@ namespace flow
             for (auto&& elem : u_f_orig)
                 writer::print_complex("", elem);
         }
-        return join_rows(arma::real(u_f_), arma::imag(u_f_));
+        return join_rows(arma::real(u_f_orig), arma::imag(u_f_orig));
     }
 
     arma::mat calc::short_circuit_edge_current()
