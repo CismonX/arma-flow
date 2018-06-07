@@ -439,18 +439,11 @@ namespace flow
         auto i = 0U;
         if (verbose_)
             writer::println("Short circuit edge current:");
-        for (auto&& edge : edges_)
-        {
+        for (auto&& edge : edges_) {
             const auto admittance = edge.admittance();
             const auto m = node_offset(edge.m);
             const auto n = node_offset(edge.n);
-            std::complex<double> y;
-            if (edge.k) {
-                y = admittance * (edge.k * edge.k - edge.k + 1) / (edge.k * edge.k);
-            } else {
-                y = admittance + edge.grounding_admittance() * 2.0;
-            }
-            edge_current[i] = (u_f_[m] - u_f_[n] / (edge.k ? edge.k : 1)) * y;
+            edge_current[i] = (u_f_[m] - u_f_[n] / (edge.k ? edge.k : 1)) * admittance;
             if (verbose_)
                 writer::print_complex(std::to_string(edge.m + 1) + ',' +
                     std::to_string(edge.n + 1) + ": ", edge_current[i]);
