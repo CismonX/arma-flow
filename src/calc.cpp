@@ -440,7 +440,7 @@ namespace flow
         if (verbose_)
             writer::println("Short circuit edge current:");
         for (auto&& edge : edges_) {
-            const auto admittance = edge.admittance();
+            const auto admittance = -edge.admittance();
             const auto m = node_offset(edge.m);
             const auto n = node_offset(edge.n);
             edge_current[i] = (u_f_[m] - u_f_[n] / (edge.k ? edge.k : 1)) * admittance;
