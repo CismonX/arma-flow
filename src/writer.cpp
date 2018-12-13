@@ -4,6 +4,8 @@
 // @author CismonX
 //
 
+#include "writer.hpp"
+
 #ifdef _WIN32
 #include <Windows.h>
 #else
@@ -11,8 +13,6 @@
 #endif // _WIN32
 #include <iomanip>
 #include <experimental/filesystem>
-
-#include "writer.hpp"
 
 namespace flow
 {
