@@ -25,35 +25,43 @@ namespace flow
 
         // Read data from file.
         std::string path_to_nodes, path_to_edges;
-        if (!args->input_file_path(path_to_nodes, path_to_edges))
+        if (!args->input_file_path(path_to_nodes, path_to_edges)) {
             args->help();
+        }
         const auto remove = args->remove_first_line();
-        if (!input->from_csv_file(path_to_nodes, remove))
+        if (!input->from_csv_file(path_to_nodes, remove)) {
             writer::error("Failed to read node data from file.");
+        }
         const auto nodes = input->get_mat();
-        if (!input->from_csv_file(path_to_edges, remove))
+        if (!input->from_csv_file(path_to_edges, remove)) {
             writer::error("Failed to read edge data from file.");
+        }
         const auto edges = input->get_mat();
 
         // Get options.
         const auto verbose = args->verbose();
         auto max = 0U;
-        if (!args->max_iterations(max) && verbose)
+        if (!args->max_iterations(max) && verbose) {
             writer::notice("Max number of iterations not specified. Defaulted to 100.");
+        }
         auto epsilon = 0.0;
-        if (!args->accuracy(epsilon) && verbose)
+        if (!args->accuracy(epsilon) && verbose) {
             writer::notice("Accuracy not specified. Defaulted to 0.00001.");
-        if (epsilon < 0 || epsilon > 1)
+        }
+        if (epsilon < 0 || epsilon > 1) {
             writer::error("Invalid accuracy.");
+        }
         std::string output_path;
-        if (!args->output_file_path(output_path) && verbose)
+        if (!args->output_file_path(output_path) && verbose) {
             writer::notice("Output file path not specified. Defaulted to result-*.csv.");
+        }
         writer->set_output_path_prefix(output_path);
         unsigned short_circuit_node;
         const auto short_circuit = args->short_circuit(short_circuit_node);
         std::complex<double> transition_impedance;
-        if (short_circuit && !args->transition_impedance(transition_impedance) && verbose)
+        if (short_circuit && !args->transition_impedance(transition_impedance) && verbose) {
             writer::notice("Transition impedance not specified, Defaulted to 0.");
+        }
         const auto ignore_load = args->ignore_load();
 
         // Initialize calculation.
@@ -84,8 +92,9 @@ namespace flow
         flow_done:
 
         // Calculate three-phase short circuit.
-        if (!short_circuit)
+        if (!short_circuit) {
             return;
+        }
         const auto impedance = calc->node_impedance();
         writer->to_csv_file("node-impedance-real.csv", impedance.first);
         writer->to_csv_file("node-impedance-imag.csv", impedance.second);

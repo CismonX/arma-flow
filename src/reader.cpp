@@ -23,8 +23,9 @@ namespace flow
                 path[0] == '/'
 #endif // _WIN32
                 ? path : fs::current_path().string() + '/' + path);
-            if (remove_first_line)
+            if (remove_first_line) {
                 ifstream.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+            }
             return do_read(ifstream);
         }
         catch (const std::exception&) {

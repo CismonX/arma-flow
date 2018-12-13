@@ -20,13 +20,15 @@ namespace flow
     {
 #ifdef _WIN32
         CONSOLE_SCREEN_BUFFER_INFO csbi;
-        if (!GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &csbi))
+        if (!GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &csbi)) {
             return 10;
+        }
         const auto width = csbi.dwSize.X;
 #else
         winsize win;
-        if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &win) == -1)
+        if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &win) == -1) {
             return 10;
+        }
         const auto width = win.ws_col;
 #endif // _WIN32
         return std::floor((width - 7) / 11);
@@ -36,8 +38,9 @@ namespace flow
     {
         auto str = std::to_string(val ? val : std::abs(val));
         auto pos = str.find_last_not_of('0');
-        if (pos == 0 || str[pos] == '.')
+        if (pos == 0 || str[pos] == '.') {
             --pos;
+        }
         return str.substr(0, pos + 1);
     }
 
@@ -85,8 +88,9 @@ namespace flow
             {
                 for (auto col = 0U; col < row.n_elem; ++col) {
                     ofstream << double_to_string(row[col]);
-                    if (col != row.n_elem - 1)
+                    if (col != row.n_elem - 1) {
                         ofstream << ',';
+                    }
                 }
                 ofstream << std::endl;
             });

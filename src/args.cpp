@@ -32,8 +32,9 @@ namespace flow
 
     bool args::input_file_path(std::string& nodes, std::string& edges)
     {
-        if (!arg_parser_.found("n") || !arg_parser_.found("e"))
+        if (!arg_parser_.found("n") || !arg_parser_.found("e")) {
             return false;
+        }
         nodes = arg_parser_.getString("n");
         edges = arg_parser_.getString("e");
         return true;
@@ -69,8 +70,9 @@ namespace flow
 
     bool args::short_circuit(unsigned& node)
     {
-        if (!arg_parser_.found("s"))
+        if (!arg_parser_.found("s")) {
             return false;
+        }
         node = arg_parser_.getInt("s");
         return true;
     }
@@ -82,8 +84,9 @@ namespace flow
 
     bool args::transition_impedance(std::complex<double>& z_f)
     {
-        if (!arg_parser_.found("tr") && !arg_parser_.found("ti"))
+        if (!arg_parser_.found("tr") && !arg_parser_.found("ti")) {
             return false;
+        }
         z_f = { arg_parser_.getDouble("tr"), arg_parser_.getDouble("ti") };
         return true;
     }

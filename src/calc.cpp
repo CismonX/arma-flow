@@ -11,9 +11,11 @@ namespace flow
 {
     unsigned calc::node_offset(unsigned id) const
     {
-        for (auto offset = 0U; offset < num_nodes_; ++offset)
-            if (nodes_[offset].id == id)
+        for (auto offset = 0U; offset < num_nodes_; ++offset) {
+            if (nodes_[offset].id == id) {
                 return offset;
+            }
+        }
         return 0;
     }
 
@@ -30,18 +32,22 @@ namespace flow
     double calc::j_elem_a(unsigned row) const
     {
         auto sum = 0.0;
-        for (auto col = 0U; col < num_nodes_; ++col)
-            if (row == col || adj_.at(row, col))
+        for (auto col = 0U; col < num_nodes_; ++col) {
+            if (row == col || adj_.at(row, col)) {
                 sum += n_adm_b_.at(row, col) * f_[col] - n_adm_g_.at(row, col) * e_[col];
+            }
+        }
         return sum;
     }
 
     double calc::j_elem_c(unsigned row) const
     {
         auto sum = 0.0;
-        for (auto col = 0U; col < num_nodes_; ++col)
-            if (row == col || adj_.at(row, col))
+        for (auto col = 0U; col < num_nodes_; ++col) {
+            if (row == col || adj_.at(row, col)) {
                 sum += n_adm_g_.at(row, col) * f_[col] + n_adm_b_.at(row, col) * e_[col];
+            }
+        }
         return sum;
     }
 
@@ -49,55 +55,68 @@ namespace flow
     {
         mat_elem_foreach(j_h_, [this](auto& elem, auto row, auto col)
         {
-            if (row == col)
+            if (row == col) {
                 elem = j_elem_c(row) - j_elem_d(row);
-            else
+            } else {
                 elem = -j_elem_b_g(row, col);
+            }
         });
         mat_elem_foreach(j_n_, [this](auto& elem, auto row, auto col)
         {
-            if (row == col)
+            if (row == col) {
                 elem = -j_elem_a(row) + j_elem_b(row);
-            else
+            } else {
                 elem = j_elem_g_b(row, col);
+            }
         });
         mat_elem_foreach(j_m_, [this](auto& elem, auto row, auto col)
         {
-            if (row == col)
+            if (row == col) {
                 elem = -j_elem_a(row) - j_elem_b(row);
-            else
+            } else {
                 elem = -j_elem_g_b(row, col);
+            }
         });
         mat_elem_foreach(j_l_, [this](auto& elem, auto row, auto col)
         {
-            if (row == col)
+            if (row == col) {
                 elem = -j_elem_c(row) - j_elem_d(row);
-            else
+            } else {
                 elem = -j_elem_b_g(row, col);
+            }
         });
         // We shouldn't start at 0. We should start at m.
         mat_elem_foreach(j_r_, [this](auto& elem, auto row, auto col)
         {
-            if (row + num_pq_ == col)
+            if (row + num_pq_ == col) {
                 elem = f_[row + num_pq_] * 2;
-            else
+            } else {
                 elem = 0;
+            }
         });
         mat_elem_foreach(j_s_, [this](auto& elem, auto row, auto col)
         {
-            if (row + num_pq_ == col)
+            if (row + num_pq_ == col) {
                 elem = e_[row + num_pq_] * 2;
-            else
+            } else {
                 elem = 0;
+            }
         });
     }
 
-    void calc::init(const arma::mat& nodes, const arma::mat& edges,
-        bool verbose, double epsilon, bool short_circuit, bool ignore_load,
-        unsigned short_circuit_node, const std::complex<double>& z_f)
+    void calc::init(
+        const arma::mat&            nodes,
+        const arma::mat&            edges,
+        bool                        verbose, 
+        double                      epsilon, 
+        bool                        short_circuit, 
+        bool                        ignore_load,
+        unsigned                    short_circuit_node, 
+        const std::complex<double>& z_f)
     {
-        if (nodes.n_cols != (short_circuit ? 6 : 5) || edges.n_cols != 6)
+        if (nodes.n_cols != (short_circuit ? 6 : 5) || edges.n_cols != 6) {
             writer::error("Bad input matrix format.");
+        }
         short_circuit_ = short_circuit;
         nodes.each_row([this](const arma::rowvec& row)
         {
@@ -109,8 +128,9 @@ namespace flow
             } else if (type_val == 2) {
                 type = node_data::pv;
                 ++num_pv_;
-            } else if (type_val != 0)
+            } else if (type_val != 0) {
                 writer::error("Bad node type.");
+            }
             if (short_circuit_) {
                 nodes_.push_back({
                     num_nodes_++, row[0], row[1], row[2], row[3], row[4], type
@@ -128,14 +148,16 @@ namespace flow
             return n1.type < n2.type;
         });
         adj_.zeros(num_nodes_, num_nodes_);
-        if (num_nodes_ != num_pq_ + num_pv_ + 1)
+        if (num_nodes_ != num_pq_ + num_pv_ + 1) {
             writer::error("Only one swing node should exist.");
+        }
         edges.each_row([this](const arma::rowvec& row)
         {
             const auto n1 = static_cast<unsigned>(row[0]) - 1;
             const auto n2 = static_cast<unsigned>(row[1]) - 1;
-            if (n1 >= num_nodes_ || n2 >= num_nodes_)
+            if (n1 >= num_nodes_ || n2 >= num_nodes_) {
                 writer::error("Bad node offset.");
+            }
             edges_.push_back({
                 n1, n2, row[2], row[3], row[4], row[5]
             });
@@ -143,8 +165,9 @@ namespace flow
         verbose_ = verbose;
         epsilon_ = epsilon;
         ignore_load_ = ignore_load;
-        if (short_circuit_node < 1 || short_circuit_node > num_nodes_)
+        if (short_circuit_node < 1 || short_circuit_node > num_nodes_) {
             writer::error("Bad node ID for short circuit calculation.");
+        }
         short_circuit_node_ = node_offset(short_circuit_node - 1);
         z_f_ = z_f;
     }
@@ -311,8 +334,9 @@ namespace flow
 
     unsigned calc::solve()
     {
-        if (verbose_)
+        if (verbose_) {
             writer::println("Number of iterations: ", n_iter_, " (begin)");
+        }
         jacobian();
         prepare_solve();
         const auto x_vec = spsolve(j_, f_x_, "superlu");
@@ -331,8 +355,9 @@ namespace flow
             writer::print_mat(f_.t());
         }
         update_f_x();
-        if (verbose_)
+        if (verbose_) {
             writer::println("Number of iterations: ", n_iter_, " (end)");
+        }
         return n_iter_++;
     }
 
@@ -340,40 +365,48 @@ namespace flow
     {
         arma::mat mat = join_cols(join_cols(delta_p_, delta_q_), delta_v_);
         auto max = 0.0;
-        for (auto&& elem : mat)
-            if (std::abs(elem) > max)
+        for (auto&& elem : mat) {
+            if (std::abs(elem) > max) {
                 max = std::abs(elem);
+            }
+        }
         return max;
     }
 
     arma::mat calc::result()
     {
         p_[num_nodes_ - 1] = calc_p(num_nodes_ - 1);
-        for (auto&& elem : p_)
-            if (approx_zero(elem))
+        for (auto&& elem : p_) {
+            if (approx_zero(elem)) {
                 elem = 0;
+            }
+        }
         vec_elem_foreach(delta_v_, [this](auto& elem, auto row)
         {
             auto i = row + num_pq_;
             q_[i] = calc_q(i);
         });
         q_[num_nodes_ - 1] = calc_q(num_nodes_ - 1);
-        for (auto&& elem : q_)
-            if (approx_zero(elem))
+        for (auto&& elem : q_) {
+            if (approx_zero(elem)) {
                 elem = 0;
+            }
+        }
         v_.zeros(num_nodes_);
         vec_elem_foreach(v_, [this](auto& elem, auto col)
         {
             elem = std::sqrt(std::pow(e_[col], 2) + std::pow(f_[col], 2));
-            if (approx_zero(elem))
+            if (approx_zero(elem)) {
                 elem = 0;
+            }
         });
         arma::colvec theta(num_nodes_);
         vec_elem_foreach(theta, [this](auto& elem, auto row)
         {
             elem = std::atan(f_[row] / e_[row]);
-            if (approx_zero(elem))
+            if (approx_zero(elem)) {
                 elem = 0;
+            }
         });
         arma::colvec node_id(num_nodes_);
         vec_elem_foreach(node_id, [this](auto& elem, auto row)
@@ -393,10 +426,11 @@ namespace flow
     std::complex<double> calc::short_circuit_current()
     {
         const auto n = short_circuit_node_;
-        if (ignore_load_)
+        if (ignore_load_) {
             i_f_ = 1;
-        else
+        } else {
             i_f_ = { e_[n], f_[n] };
+        }
         i_f_ /= std::complex<double>(n_imp_g_.at(n, n), n_imp_b_.at(n, n)) + z_f_;
         return i_f_;
     }
@@ -415,10 +449,12 @@ namespace flow
             }
             elem = u_f - cx(n_imp_g_.at(row, n), n_imp_b_.at(row, n)) *
                 (u_i / (cx(n_imp_g_.at(n, n), n_imp_b_.at(n, n)) + z_f_));
-            if (approx_zero(elem.real()))
+            if (approx_zero(elem.real())) {
                 elem.real(0);
-            if (approx_zero(elem.imag()))
+            }
+            if (approx_zero(elem.imag())) {
                 elem.imag(0);
+            }
         });
         arma::cx_colvec u_f_orig(num_nodes_);
         vec_elem_foreach(u_f_, [&u_f_orig, this](auto&& elem, auto row)
@@ -427,8 +463,9 @@ namespace flow
         });
         if (verbose_) {
             writer::println("Short circuit node voltage:");
-            for (auto&& elem : u_f_orig)
+            for (auto&& elem : u_f_orig) {
                 writer::print_complex("", elem);
+            }
         }
         return join_rows(arma::real(u_f_orig), arma::imag(u_f_orig));
     }
@@ -444,9 +481,10 @@ namespace flow
             const auto m = node_offset(edge.m);
             const auto n = node_offset(edge.n);
             edge_current[i] = (u_f_[m] - u_f_[n] / (edge.k ? edge.k : 1)) * admittance;
-            if (verbose_)
+            if (verbose_) {
                 writer::print_complex(std::to_string(edge.m + 1) + ',' +
                     std::to_string(edge.n + 1) + ": ", edge_current[i]);
+            }
             ++i;
         }
         return join_rows(arma::real(edge_current), arma::imag(edge_current));

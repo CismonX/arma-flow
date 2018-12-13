@@ -273,9 +273,15 @@ namespace flow
         /**
          * Initialize.
          */
-        void init(const arma::mat& nodes, const arma::mat& edges,
-            bool verbose, double epsilon, bool short_circuit, bool ignore_load,
-            unsigned short_circuit_node, const std::complex<double>& z_f);
+        void init(
+            const arma::mat&            nodes,
+            const arma::mat&            edges,
+            bool                        verbose,
+            double                      epsilon,
+            bool                        short_circuit,
+            bool                        ignore_load,
+            unsigned                    short_circuit_node,
+            const std::complex<double>& z_f);
 
         /**
          * Calculate node admittance.

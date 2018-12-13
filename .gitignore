@@ -1,0 +1,4 @@
+.vscode/
+arma-flow
+src/*.o
+*.csv
