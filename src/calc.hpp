@@ -213,9 +213,11 @@ namespace flow
         template <typename M, typename F>
         static void mat_elem_foreach(M& mat, F func)
         {
-            for (auto row = 0U; row < mat.n_rows; ++row)
-                for (auto col = 0U; col < mat.n_cols; ++col)
+            for (auto row = 0U; row < mat.n_rows; ++row) {
+                for (auto col = 0U; col < mat.n_cols; ++col) {
                     func(mat.at(row, col), row, col);
+                }
+            }
         }
 
         /**
@@ -227,8 +229,9 @@ namespace flow
         template <typename V, typename F>
         static void vec_elem_foreach(V& vec, F func)
         {
-            for (auto i = 0U; i < vec.n_elem; ++i)
+            for (auto i = 0U; i < vec.n_elem; ++i) {
                 func(vec[i], i);
+            }
         }
 
         /**

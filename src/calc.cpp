@@ -165,11 +165,13 @@ namespace flow
         verbose_ = verbose;
         epsilon_ = epsilon;
         ignore_load_ = ignore_load;
-        if (short_circuit_node < 1 || short_circuit_node > num_nodes_) {
-            writer::error("Bad node ID for short circuit calculation.");
+        if (short_circuit_) {
+            if (short_circuit_node < 1 || short_circuit_node > num_nodes_) {
+                writer::error("Bad node ID for short circuit calculation.");
+            }
+            short_circuit_node_ = node_offset(short_circuit_node - 1);
+            z_f_ = z_f;
         }
-        short_circuit_node_ = node_offset(short_circuit_node - 1);
-        z_f_ = z_f;
     }
 
     std::pair<arma::mat, arma::mat> calc::node_admittance()
@@ -249,7 +251,7 @@ namespace flow
         auto i_p = 0;
         auto i_q = 0;
         auto i_v = 0;
-        e_.resize(num_nodes_);
+        e_.set_size(num_nodes_);
         for (auto&& node : nodes_) {
             if (node.type == node_data::pq) {
                 init_p_[i_p] = -node.p;
@@ -342,11 +344,15 @@ namespace flow
         const auto x_vec = spsolve(j_, f_x_, "superlu");
         vec_elem_foreach(f_, [&x_vec](auto& elem, auto row)
         {
-            elem += x_vec.at(2 * row, 0);
+            if (2 * row < x_vec.n_elem) {
+                elem += x_vec.at(2 * row, 0);
+            }
         });
         vec_elem_foreach(e_, [&x_vec](auto& elem, auto row)
         {
-            elem += x_vec.at(2 * row + 1, 0);
+            if (2 * row + 1 < x_vec.n_elem) {
+                elem += x_vec.at(2 * row + 1, 0);
+            }
         });
         if (verbose_) {
             writer::println("Correction vector of voltage (real):");
